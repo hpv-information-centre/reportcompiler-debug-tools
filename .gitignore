@@ -2,3 +2,4 @@ __pycache__/
 *.py[cod]
 .vscode
 .pylintrc
+reportcompiler_debugging_tools/r/.Rhistory

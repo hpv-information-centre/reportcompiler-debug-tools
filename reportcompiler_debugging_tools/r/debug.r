@@ -1,6 +1,6 @@
 library(jsonlite)
 
-compile_last_fragment <- function(report_path) {
+generate_failed_contexts <- function(report_path) {
     tryCatch(
         json_file <- file(paste(report_path, '_meta', 'last_debug_errors',sep='/'), open='r'),
         error=function() {
@@ -9,6 +9,7 @@ compile_last_fragment <- function(report_path) {
     last_values <- fromJSON(json_file, simplifyVector=F)
     
     for(frag in last_values) {
+        print(paste0("Error on fragment '", frag$metadata$fragment_name, "' (", frag$timestamp, ")"))
         doc_var <- frag$doc_var
         data <- lapply(names(frag$data), function(n){data.frame(frag$data[n][[1]])})
         names(data) <- names(frag$data)
@@ -33,4 +34,4 @@ compile_last_fragment <- function(report_path) {
 
 reports.path <- Sys.getenv('REPORTS_PATH')
 
-compile_last_fragment(reports.path)
+generate_failed_contexts(reports.path)

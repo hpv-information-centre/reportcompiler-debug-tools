@@ -2,19 +2,27 @@ import json
 import os
 import sys
 import pandas as pd
-from reportcompiler.plugins.context_generators.python_generator \
-    import PythonContextGenerator
-from reportcompiler.plugins.context_generators.context_generators \
-    import FragmentContextGenerator
+from reportcompiler.plugins.source_parsers.python \
+    import PythonParser
+from reportcompiler.plugins.source_parsers.base \
+    import SourceParser
 
 
-def compile_last_fragment(report_path):
-    with open(os.path.join(report_path,
-                           '_meta',
-                           'last_debug_errors'), 'r') as f:
-        last_values = json.load(f)
+def generate_failed_contexts(report_path):
+    try:
+        with open(os.path.join(report_path,
+                               '_meta',
+                               'last_debug_errors'), 'r') as f:
+            last_values = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            'There is no file with debugging data, please retry '
+            'generating a document on debug mode')
 
     for frag in last_values:
+        print("Error on fragment '{}' ({})".format(
+            frag['metadata']['fragment_name'],
+            frag['timestamp']))
         doc_var = frag['doc_var']
         data = {name: pd.DataFrame(data)
                 for name, data in frag['data'].items()}
@@ -24,21 +32,19 @@ def compile_last_fragment(report_path):
         _, ext = os.path.splitext(fragment)
 
         generator_info = metadata.get('context_generator')
-        generator = FragmentContextGenerator.get(id=generator_info,
-                                                 extension=ext)
         if isinstance(generator_info, str):
-            generator = FragmentContextGenerator.get(id=generator_info,
-                                                     extension=ext)
+            generator = SourceParser.get(id=generator_info,
+                                         extension=ext)
         elif isinstance(generator_info, dict):
-            generator = FragmentContextGenerator.get(
+            generator = SourceParser.get(
                             id=generator_info[ext])
 
-        if generator.__class__ == PythonContextGenerator:
+        if generator.__class__ == PythonParser:
             sys.path.append(os.path.join(report_path, frag['report'], 'src'))
             try:
-                ctx = PythonContextGenerator().generate_context(doc_var,
-                                                                data,
-                                                                metadata)
+                ctx = PythonParser().generate_context(doc_var,
+                                                      data,
+                                                      metadata)
                 print('\n{}\n'.format(ctx))
                 print('*** {} has finished successfully.'.format(fragment))
             except Exception:
@@ -48,4 +54,4 @@ def compile_last_fragment(report_path):
 
 
 if __name__ == '__main__':
-    compile_last_fragment(report_path=os.environ['REPORTS_PATH'])
+    generate_failed_contexts(report_path=os.environ['REPORTS_PATH'])
